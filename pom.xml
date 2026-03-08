@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ============================================================
+  WHAT IS THIS FILE?
+  ============================================================
+  pom.xml is the "shopping list" for your Java project.
+  It tells Java (via a tool called Maven) which libraries
+  to download and use. Think of libraries as pre-built
+  tools — we don't write them, we just use them.
+
+  We're using "Spring Boot" — a popular Java framework that
+  makes building web servers very easy.
+  ============================================================
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+
+  <!-- Project identity — like a name tag for your server -->
+  <groupId>com.cravefinder</groupId>
+  <artifactId>cravefinder-server</artifactId>
+  <version>1.0.0</version>
+  <packaging>jar</packaging>
+  <name>CraveFinder Server</name>
+
+  <!-- Spring Boot parent — gives us sensible defaults for free -->
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.2.0</version>
+    <relativePath/>
+  </parent>
+
+  <properties>
+    <java.version>17</java.version>
+  </properties>
+
+  <!-- DEPENDENCIES = libraries we want to use -->
+  <dependencies>
+
+    <!-- Spring Boot Web: lets us create HTTP endpoints (URLs our app responds to) -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+  </dependencies>
+
+  <build>
+    <plugins>
+      <!-- This plugin packages everything into one runnable .jar file -->
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>

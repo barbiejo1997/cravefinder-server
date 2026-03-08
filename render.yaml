@@ -1,0 +1,29 @@
+# ============================================================
+# WHAT IS THIS FILE?
+# ============================================================
+# render.yaml tells Render.com (your free hosting platform)
+# exactly how to build and run your Java server.
+#
+# When you connect this project to Render, it reads this file
+# and automatically sets everything up — no manual config needed.
+# ============================================================
+
+services:
+  - type: web              # This is a web server (responds to HTTP requests)
+    name: cravefinder-api  # Name shown in your Render dashboard
+    runtime: java          # We're using Java
+    plan: free             # Free tier — no credit card needed
+
+    # BUILD COMMAND: How to compile your Java code into a runnable file
+    # Maven (mvn) reads pom.xml, downloads dependencies, compiles, packages
+    buildCommand: mvn clean package -DskipTests
+
+    # START COMMAND: How to actually run your server
+    # java -jar runs the packaged .jar file Maven created
+    startCommand: java -jar target/cravefinder-server-1.0.0.jar
+
+    # ENVIRONMENT VARIABLES: Secrets stored safely on Render's servers
+    # You'll fill in YOUR actual Foursquare key in the Render dashboard
+    envVars:
+      - key: FOURSQUARE_API_KEY
+        sync: false   # "sync: false" means: don't store in this file, set it manually in dashboard
