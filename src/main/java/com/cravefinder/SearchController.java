@@ -17,22 +17,32 @@ public class SearchController {
 
     private static final Map<String, String> CITY_COORDS = new HashMap<>();
     static {
-        CITY_COORDS.put("New York,NY",      "40.7128,-74.0060");
-        CITY_COORDS.put("Los Angeles,CA",   "34.0522,-118.2437");
+        CITY_COORDS.put("Austin,TX",        "30.2672,-97.7431");
+        CITY_COORDS.put("Charlotte,NC",     "35.2271,-80.8431");
         CITY_COORDS.put("Chicago,IL",       "41.8781,-87.6298");
+        CITY_COORDS.put("Columbus,OH",      "39.9612,-82.9988");
+        CITY_COORDS.put("Dallas,TX",        "32.7767,-96.7970");
+        CITY_COORDS.put("Denver,CO",        "39.7392,-104.9903");
+        CITY_COORDS.put("El Paso,TX",       "31.7619,-106.4850");
+        CITY_COORDS.put("Fort Worth,TX",    "32.7555,-97.3308");
         CITY_COORDS.put("Houston,TX",       "29.7604,-95.3698");
-        CITY_COORDS.put("Phoenix,AZ",       "33.4484,-112.0740");
+        CITY_COORDS.put("Indianapolis,IN",  "39.7684,-86.1581");
+        CITY_COORDS.put("Jacksonville,FL",  "30.3322,-81.6557");
+        CITY_COORDS.put("Las Vegas,NV",     "36.1699,-115.1398");
+        CITY_COORDS.put("Los Angeles,CA",   "34.0522,-118.2437");
+        CITY_COORDS.put("Louisville,KY",    "38.2527,-85.7585");
+        CITY_COORDS.put("Nashville,TN",     "36.1627,-86.7816");
+        CITY_COORDS.put("New York,NY",      "40.7128,-74.0060");
+        CITY_COORDS.put("Oklahoma City,OK", "35.4676,-97.5164");
         CITY_COORDS.put("Philadelphia,PA",  "39.9526,-75.1652");
+        CITY_COORDS.put("Phoenix,AZ",       "33.4484,-112.0740");
+        CITY_COORDS.put("Pittsburgh,PA",    "40.4406,-79.9959");
         CITY_COORDS.put("San Antonio,TX",   "29.4241,-98.4936");
         CITY_COORDS.put("San Diego,CA",     "32.7157,-117.1611");
-        CITY_COORDS.put("Dallas,TX",        "32.7767,-96.7970");
-        CITY_COORDS.put("Jacksonville,FL",  "30.3322,-81.6557");
-        CITY_COORDS.put("Austin,TX",        "30.2672,-97.7431");
-        CITY_COORDS.put("Fort Worth,TX",    "32.7555,-97.3308");
-        CITY_COORDS.put("Columbus,OH",      "39.9612,-82.9988");
-        CITY_COORDS.put("Charlotte,NC",     "35.2271,-80.8431");
         CITY_COORDS.put("San Francisco,CA", "37.7749,-122.4194");
-        CITY_COORDS.put("Pittsburgh,PA",    "40.4406,-79.9959");
+        CITY_COORDS.put("San Jose,CA",      "37.3382,-121.8863");
+        CITY_COORDS.put("Seattle,WA",       "47.6062,-122.3321");
+        CITY_COORDS.put("Washington,DC",    "38.9072,-77.0369");
     }
 
     @GetMapping("/health")
