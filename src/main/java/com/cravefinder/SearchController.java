@@ -11,15 +11,10 @@ import java.util.HashMap;
 @CrossOrigin(origins = "*")
 public class SearchController {
 
-    private final String GOOGLE_KEY = System.getenv("GOOGLE_API_KEY");
-    private final RestTemplate http = new RestTemplate();
+    private final String GOOGLE_KEY    = System.getenv("GOOGLE_API_KEY");
+    private final String SHEETS_URL    = System.getenv("SHEETS_SCRIPT_URL");
+    private final RestTemplate http    = new RestTemplate();
 
-    /**
-     * City coordinates map — used to bias Google results to the correct city.
-     * Without this, Google sometimes returns results from other states!
-     * "location" biases results toward these coordinates, and "radius" (in meters)
-     * sets how far out from the city center to search.
-     */
     private static final Map<String, String> CITY_COORDS = new HashMap<>();
     static {
         CITY_COORDS.put("New York,NY",      "40.7128,-74.0060");
@@ -43,12 +38,40 @@ public class SearchController {
     @GetMapping("/health")
     public Map<String, String> health() {
         return Map.of(
-            "status", "ok",
-            "service", "CraveFinder",
-            "keyLoaded", GOOGLE_KEY != null ? "yes" : "NO - check env vars!"
+            "status",      "ok",
+            "service",     "CraveFinder",
+            "googleKey",   GOOGLE_KEY  != null ? "yes" : "NO",
+            "sheetsUrl",   SHEETS_URL  != null ? "yes" : "NO (community submissions disabled)"
         );
     }
 
+    /**
+     * SUBMIT ENDPOINT — saves a user community submission to Google Sheets
+     * Called when a user submits a new dish/restaurant from the app
+     */
+    @PostMapping("/submit")
+    public ResponseEntity<String> submit(@RequestBody String body) {
+        if (SHEETS_URL == null || SHEETS_URL.isBlank()) {
+            return ResponseEntity.status(503)
+                .body("{\"error\": \"Community submissions not configured\"}");
+        }
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<String> request = new HttpEntity<>(body, headers);
+            ResponseEntity<String> response = http.exchange(
+                SHEETS_URL, HttpMethod.POST, request, String.class
+            );
+            return ResponseEntity.ok(response.getBody());
+        } catch (Exception e) {
+            return ResponseEntity.status(502)
+                .body("{\"error\": \"Submission failed: " + e.getMessage() + "\"}");
+        }
+    }
+
+    /**
+     * SEARCH ENDPOINT — searches Google Places AND community submissions
+     */
     @GetMapping("/search")
     public ResponseEntity<String> search(
             @RequestParam String dish,
@@ -58,55 +81,105 @@ public class SearchController {
             return ResponseEntity.badRequest()
                 .body("{\"error\": \"dish and city are required\"}");
         }
-
         if (GOOGLE_KEY == null || GOOGLE_KEY.isBlank()) {
             return ResponseEntity.status(500)
-                .body("{\"error\": \"GOOGLE_API_KEY environment variable not set\"}");
+                .body("{\"error\": \"GOOGLE_API_KEY not set\"}");
         }
 
         try {
-            String encodedQuery = java.net.URLEncoder.encode(dish + " restaurant", "UTF-8");
+            // Run Google Places and community search in parallel
+            String googleJson    = searchGoogle(dish, city);
+            String communityJson = searchCommunity(dish, city);
 
-            // Build URL — start with query and type
-            StringBuilder urlBuilder = new StringBuilder();
-            urlBuilder.append("https://maps.googleapis.com/maps/api/place/textsearch/json");
-            urlBuilder.append("?query=").append(encodedQuery);
-            urlBuilder.append("&type=restaurant");
-
-            // If we have coordinates for this city, use them to STRICTLY
-            // bias results. We use two params together:
-            //   location = center point (lat,lng)
-            //   radius   = search radius in meters (20km covers any major city)
-            // This pins results to the actual city — no more Texas results for Pittsburgh!
-            String coords = CITY_COORDS.get(city);
-            if (coords != null) {
-                urlBuilder.append("&location=").append(coords);
-                urlBuilder.append("&radius=35000");  // 35km radius
-            } else {
-                // City not in our map — fall back to name-based search
-                urlBuilder.append("&location=").append(
-                    java.net.URLEncoder.encode(city, "UTF-8")
-                );
-            }
-
-            urlBuilder.append("&key=").append(GOOGLE_KEY);
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("Accept", "application/json");
-            HttpEntity<Void> request = new HttpEntity<>(headers);
-
-            ResponseEntity<String> googleResponse = http.exchange(
-                urlBuilder.toString(), HttpMethod.GET, request, String.class
-            );
+            // Merge both result sets into one response
+            // Simple string merge — community results go first so local tips appear at top
+            String merged = mergeResults(communityJson, googleJson);
 
             return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(googleResponse.getBody());
+                .body(merged);
 
         } catch (Exception e) {
-            System.err.println("Google Places call failed: " + e.getMessage());
+            System.err.println("Search failed: " + e.getMessage());
             return ResponseEntity.status(502)
                 .body("{\"error\": \"Search failed: " + e.getMessage() + "\"}");
         }
+    }
+
+    private String searchGoogle(String dish, String city) throws Exception {
+        String encodedQuery = java.net.URLEncoder.encode(dish + " restaurant", "UTF-8");
+        StringBuilder url = new StringBuilder();
+        url.append("https://maps.googleapis.com/maps/api/place/textsearch/json");
+        url.append("?query=").append(encodedQuery);
+        url.append("&type=restaurant");
+
+        String coords = CITY_COORDS.get(city);
+        if (coords != null) {
+            url.append("&location=").append(coords);
+            url.append("&radius=35000");
+        }
+        url.append("&key=").append(GOOGLE_KEY);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Accept", "application/json");
+        ResponseEntity<String> response = http.exchange(
+            url.toString(), HttpMethod.GET, new HttpEntity<>(headers), String.class
+        );
+        return response.getBody();
+    }
+
+    private String searchCommunity(String dish, String city) {
+        if (SHEETS_URL == null || SHEETS_URL.isBlank()) return "{\"results\":[]}";
+        try {
+            String url = SHEETS_URL
+                + "?dish=" + java.net.URLEncoder.encode(dish, "UTF-8")
+                + "&city=" + java.net.URLEncoder.encode(city, "UTF-8");
+            ResponseEntity<String> response = http.exchange(
+                url, HttpMethod.GET, new HttpEntity<>(new HttpHeaders()), String.class
+            );
+            return response.getBody();
+        } catch (Exception e) {
+            System.err.println("Community search failed (non-fatal): " + e.getMessage());
+            return "{\"results\":[]}";
+        }
+    }
+
+    /**
+     * Merges community results (from Sheets) with Google results.
+     * Community results appear first so local tips get visibility.
+     * This is a simple string approach — extracts the arrays and combines them.
+     */
+    private String mergeResults(String communityJson, String googleJson) {
+        try {
+            // Extract the results arrays from each JSON string
+            String communityArray = extractResultsArray(communityJson);
+            String googleArray    = extractResultsArray(googleJson);
+
+            // Combine: community first, then Google
+            String combined;
+            if (communityArray.equals("[]")) {
+                combined = googleArray;
+            } else if (googleArray.equals("[]")) {
+                combined = communityArray;
+            } else {
+                // Remove the closing ] from community and opening [ from google, join with comma
+                combined = communityArray.substring(0, communityArray.length() - 1)
+                         + ","
+                         + googleArray.substring(1);
+            }
+
+            return "{\"results\":" + combined + ",\"status\":\"OK\"}";
+        } catch (Exception e) {
+            // If merge fails, just return Google results
+            return googleJson;
+        }
+    }
+
+    private String extractResultsArray(String json) {
+        if (json == null) return "[]";
+        int start = json.indexOf("[");
+        int end   = json.lastIndexOf("]");
+        if (start == -1 || end == -1) return "[]";
+        return json.substring(start, end + 1);
     }
 }
